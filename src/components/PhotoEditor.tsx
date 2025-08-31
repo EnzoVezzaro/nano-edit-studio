@@ -406,7 +406,7 @@ export const PhotoEditor = () => {
         </div>
 
         {/* Right Sidebar - Panels */}
-        <div className="w-80 bg-card border-l border-border flex flex-col">
+        <div className="w-80 bg-card border-l border-border flex flex-col overflow-y-auto">
           {/* API Key Input */}
           <div className="p-4 border-b border-border">
             <label className="text-sm font-medium text-muted-foreground mb-2 block">

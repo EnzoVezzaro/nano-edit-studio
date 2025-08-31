@@ -1,12 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { 
-  Move, 
-  Brush, 
-  Eraser, 
-  Square, 
-  Circle, 
-  Type 
+import {
+  MousePointer,
+  Move,
+  Brush,
+  Eraser,
+  Square,
+  Circle,
+  Type
 } from "lucide-react";
 import type { Tool } from "./PhotoEditor";
 import { cn } from "@/lib/utils";
@@ -17,7 +18,8 @@ interface ToolPanelProps {
 }
 
 const tools = [
-  { id: "select" as Tool, icon: Move, label: "Select & Move", shortcut: "V" },
+  { id: "select" as Tool, icon: MousePointer, label: "Select & Move", shortcut: "V" },
+  { id: "move" as Tool, icon: Move, label: "Pan Canvas", shortcut: "M" },
   { id: "brush" as Tool, icon: Brush, label: "Brush", shortcut: "B" },
   { id: "eraser" as Tool, icon: Eraser, label: "Eraser", shortcut: "E" },
   { id: "rectangle" as Tool, icon: Square, label: "Rectangle", shortcut: "R" },
