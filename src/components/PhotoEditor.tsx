@@ -1,3 +1,4 @@
+
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -67,23 +68,33 @@ export const PhotoEditor = () => {
       return;
     }
 
+    if (!canvasRef.current) {
+      toast.error("Canvas not ready");
+      return;
+    }
+
     setIsProcessing(true);
     setProgress(0);
 
-    // Simulate AI processing
+    // Simulate AI processing with progress
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 90) {
           clearInterval(progressInterval);
           return 90;
         }
-        return prev + Math.random() * 10;
+        return prev + Math.random() * 15;
       });
     }, 200);
 
     try {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Apply a mock visual effect to the canvas to simulate the AI edit
+      if (canvasRef.current && canvasRef.current.applyMockEdit) {
+        canvasRef.current.applyMockEdit(prompt);
+      }
       
       // Mock edit result
       const newEdit: EditHistory = {

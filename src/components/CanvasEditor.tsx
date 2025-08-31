@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useRef, useImperativeHandle, useState } from "react";
-import { Canvas as FabricCanvas, Circle, Rect, FabricText, FabricImage } from "fabric";
+import { Canvas as FabricCanvas, Circle, Rect, FabricText, FabricImage, FabricObject } from "fabric";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, RotateCcw, RotateCw, Move } from "lucide-react";
 import type { Tool } from "./PhotoEditor";
@@ -14,6 +14,7 @@ interface CanvasEditorProps {
 export interface CanvasEditorRef {
   exportImage: () => void;
   clear: () => void;
+  applyMockEdit: (prompt: string) => void;
 }
 
 export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
@@ -46,6 +47,68 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           fabricCanvas.backgroundColor = '#1a1a1a';
           fabricCanvas.renderAll();
         }
+      },
+      applyMockEdit: (prompt: string) => {
+        if (!fabricCanvas) return;
+        
+        // Apply different mock visual effects based on the prompt content
+        if (prompt.toLowerCase().includes('color') || prompt.toLowerCase().includes('recolor')) {
+          // Add a colored overlay to simulate color changes
+          const overlay = new Rect({
+            left: 0,
+            top: 0,
+            width: fabricCanvas.width,
+            height: fabricCanvas.height,
+            fill: 'rgba(139, 92, 246, 0.2)', // Purple tint
+            selectable: false,
+            evented: false
+          });
+          fabricCanvas.add(overlay);
+        } else if (prompt.toLowerCase().includes('remove') || prompt.toLowerCase().includes('erase')) {
+          // Add a semi-transparent overlay to simulate object removal
+          const removeOverlay = new Rect({
+            left: fabricCanvas.width! * 0.3,
+            top: fabricCanvas.height! * 0.3,
+            width: fabricCanvas.width! * 0.4,
+            height: fabricCanvas.height! * 0.4,
+            fill: 'rgba(255, 255, 255, 0.8)',
+            stroke: 'rgba(239, 68, 68, 0.5)',
+            strokeWidth: 2,
+            strokeDashArray: [5, 5],
+            selectable: false,
+            evented: false
+          });
+          fabricCanvas.add(removeOverlay);
+        } else if (prompt.toLowerCase().includes('background')) {
+          // Add a background effect
+          const bgEffect = new Circle({
+            left: fabricCanvas.width! * 0.5,
+            top: fabricCanvas.height! * 0.5,
+            radius: Math.min(fabricCanvas.width!, fabricCanvas.height!) * 0.3,
+            fill: 'rgba(34, 197, 94, 0.3)', // Green background effect
+            originX: 'center',
+            originY: 'center',
+            selectable: false,
+            evented: false
+          });
+          fabricCanvas.add(bgEffect);
+          fabricCanvas.sendObjectToBack(bgEffect);
+        } else {
+          // General enhancement effect - add a subtle glow
+          const enhanceOverlay = new Rect({
+            left: 0,
+            top: 0,
+            width: fabricCanvas.width,
+            height: fabricCanvas.height,
+            fill: 'rgba(6, 182, 212, 0.1)', // Cyan tint for enhancement
+            selectable: false,
+            evented: false
+          });
+          fabricCanvas.add(enhanceOverlay);
+        }
+        
+        fabricCanvas.renderAll();
+        toast.success("Mock AI edit applied to canvas!");
       }
     }));
 
