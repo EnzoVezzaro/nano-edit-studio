@@ -25,7 +25,7 @@ import {
   Layers,
   Palette
 } from "lucide-react";
-import { CanvasEditor } from "./CanvasEditor";
+import { CanvasEditor, AnnotationData } from "./CanvasEditor";
 import { ImageUpload } from "./ImageUpload";
 import { ToolPanel } from "./ToolPanel";
 import { PromptPanel } from "./PromptPanel";
@@ -46,6 +46,21 @@ export interface EditHistory {
 
 export const PhotoEditor = () => {
   const [currentTool, setCurrentTool] = useState<Tool>("select");
+
+  // Refresh annotations from canvas
+  const refreshAnnotations = useCallback(() => {
+    if (canvasRef.current) {
+      const updatedAnnotations = canvasRef.current.getAnnotationsData();
+      setAnnotations(updatedAnnotations);
+    }
+  }, []);
+
+  // Handle tool changes and refresh annotations
+  const handleToolChange = useCallback((tool: Tool) => {
+    setCurrentTool(tool);
+    // Refresh annotations after a short delay to allow canvas to update
+    setTimeout(refreshAnnotations, 100);
+  }, [refreshAnnotations]);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [baseImageIndex, setBaseImageIndex] = useState(0);
   const [prompt, setPrompt] = useState("");
@@ -60,13 +75,19 @@ export const PhotoEditor = () => {
   const [provider, setProvider] = useState<"google" | "openrouter">(() => {
     return (localStorage.getItem("photobanana-provider") as "google" | "openrouter") || "google";
   });
+  const [annotations, setAnnotations] = useState<AnnotationData[]>([]);
   
   // Define a type for the canvas ref to satisfy ESLint and TypeScript errors
   interface CanvasEditorRef {
     getCanvasDataURL: () => string;
+    getOriginalImageDataURL: () => string;
+    getAnnotationsData: () => AnnotationData[];
     loadGeneratedImage: (imageData: string) => void;
     exportImage: () => void; // Added exportImage method
     clear: () => void; // Added clear method to resolve TS error
+    toggleAnnotationVisibility: (annotationId: number) => void;
+    removeAnnotation: (annotationId: number) => void;
+    setOnAnnotationsChange: (callback: (annotations: AnnotationData[]) => void) => void;
   }
   
   // Use the defined ref type
@@ -122,13 +143,55 @@ export const PhotoEditor = () => {
     }, 500);
 
     try {
-      // Get current canvas as base64 for editing
-      const baseImage = canvasRef.current.getCanvasDataURL();
-      
-      // Call Gemini API
+      // Get original image (without annotations) as base64 for editing
+      const originalImage = canvasRef.current.getOriginalImageDataURL();
+
+      // Get annotations data
+      const annotations = canvasRef.current.getAnnotationsData();
+
+      // Create enhanced prompt with annotations
+      let enhancedPrompt = prompt;
+
+      if (annotations.length > 0) {
+        enhancedPrompt += "\n\nCanvas Annotations:\n";
+
+        annotations.forEach(annotation => {
+          switch (annotation.type) {
+            case 'rect':
+              enhancedPrompt += `• Rectangle ${annotation.id}: Position (${annotation.position.x}%, ${annotation.position.y}%), Size ${annotation.width}x${annotation.height}px`;
+              if (annotation.stroke && typeof annotation.stroke === 'string') {
+                enhancedPrompt += `, Color: ${annotation.stroke}`;
+              }
+              enhancedPrompt += "\n";
+              break;
+            case 'circle':
+              enhancedPrompt += `• Circle ${annotation.id}: Position (${annotation.position.x}%, ${annotation.position.y}%), Radius ${annotation.radius}px`;
+              if (annotation.stroke && typeof annotation.stroke === 'string') {
+                enhancedPrompt += `, Color: ${annotation.stroke}`;
+              }
+              enhancedPrompt += "\n";
+              break;
+            case 'text':
+            case 'textbox':
+              enhancedPrompt += `• Text ${annotation.id}: "${annotation.text}" at position (${annotation.position.x}%, ${annotation.position.y}%)`;
+              if (annotation.fill && typeof annotation.fill === 'string') {
+                enhancedPrompt += `, Color: ${annotation.fill}`;
+              }
+              if (annotation.fontSize) {
+                enhancedPrompt += `, Size: ${annotation.fontSize}px`;
+              }
+              enhancedPrompt += "\n";
+              break;
+          }
+        });
+
+        enhancedPrompt += "\n\nIMPORTANT: These canvas annotations are for REFERENCE ONLY to help you understand what changes are needed. DO NOT include these annotation shapes, rectangles, circles, or text elements in your final generated image. The annotations are temporary drawing tools to guide your image generation - they should not appear in the output image.";
+      }
+
+      // Call Gemini API with original image and enhanced prompt
       const result = await generateImageWithGemini({
-        prompt,
-        baseImage: uploadedImages.length > 0 ? baseImage : undefined,
+        prompt: enhancedPrompt,
+        baseImage: uploadedImages.length > 0 ? originalImage : undefined,
         apiKey,
         provider // Pass the selected provider
       });
@@ -175,6 +238,44 @@ export const PhotoEditor = () => {
     }
   }, []);
 
+  const handleToggleAnnotationVisibility = useCallback((annotationId: number) => {
+    if (canvasRef.current) {
+      canvasRef.current.toggleAnnotationVisibility(annotationId);
+      // Refresh annotations data
+      const updatedAnnotations = canvasRef.current.getAnnotationsData();
+      setAnnotations(updatedAnnotations);
+    }
+  }, []);
+
+  const handleRemoveAnnotation = useCallback((annotationId: number) => {
+    if (canvasRef.current) {
+      canvasRef.current.removeAnnotation(annotationId);
+      // Refresh annotations data
+      const updatedAnnotations = canvasRef.current.getAnnotationsData();
+      setAnnotations(updatedAnnotations);
+      toast.success("Annotation removed");
+    }
+  }, []);
+
+  // Manual refresh function for layers panel
+  const handleRefreshLayers = useCallback(() => {
+    refreshAnnotations();
+    toast.success("Layers refreshed");
+  }, [refreshAnnotations]);
+
+  // Update annotations when canvas changes
+  useEffect(() => {
+    if (canvasRef.current) {
+      const updatedAnnotations = canvasRef.current.getAnnotationsData();
+      setAnnotations(updatedAnnotations);
+
+      // Set up callback for real-time updates
+      canvasRef.current.setOnAnnotationsChange((newAnnotations) => {
+        setAnnotations(newAnnotations);
+      });
+    }
+  }, [uploadedImages, baseImageIndex]);
+
   return (
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header */}
@@ -211,9 +312,9 @@ export const PhotoEditor = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Tools */}
         <div className="w-16 bg-card border-r border-border flex flex-col items-center py-4 gap-2">
-          <ToolPanel 
-            currentTool={currentTool} 
-            onToolChange={setCurrentTool}
+          <ToolPanel
+            currentTool={currentTool}
+            onToolChange={handleToolChange}
           />
         </div>
 
@@ -298,6 +399,10 @@ export const PhotoEditor = () => {
               images={uploadedImages}
               baseImageIndex={baseImageIndex}
               onBaseImageChange={setBaseImageIndex}
+              annotations={annotations}
+              onToggleAnnotationVisibility={handleToggleAnnotationVisibility}
+              onRemoveAnnotation={handleRemoveAnnotation}
+              onRefresh={handleRefreshLayers}
             />
           )}
           
