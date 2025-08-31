@@ -33,6 +33,7 @@ import { PromptPanel } from "./PromptPanel";
 import { HistoryPanel } from "./HistoryPanel";
 import { LayersPanel } from "./LayersPanel";
 import { toast } from "sonner";
+import { generateImageWithGemini } from "@/lib/gemini";
 
 export type Tool = "select" | "brush" | "eraser" | "rectangle" | "circle" | "text";
 
@@ -54,6 +55,7 @@ export const PhotoEditor = () => {
   const [editHistory, setEditHistory] = useState<EditHistory[]>([]);
   const [showLayers, setShowLayers] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
+  const [apiKey, setApiKey] = useState("");
   
   const canvasRef = useRef<any>(null);
 
@@ -68,6 +70,11 @@ export const PhotoEditor = () => {
       return;
     }
 
+    if (!apiKey.trim()) {
+      toast.error("Please enter your Gemini API key");
+      return;
+    }
+
     if (!canvasRef.current) {
       toast.error("Canvas not ready");
       return;
@@ -76,7 +83,7 @@ export const PhotoEditor = () => {
     setIsProcessing(true);
     setProgress(0);
 
-    // Simulate AI processing with progress
+    // Real progress tracking
     const progressInterval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 90) {
@@ -85,38 +92,50 @@ export const PhotoEditor = () => {
         }
         return prev + Math.random() * 15;
       });
-    }, 200);
+    }, 500);
 
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Get current canvas as base64 for editing
+      const baseImage = canvasRef.current.getCanvasDataURL();
       
-      // Apply a mock visual effect to the canvas to simulate the AI edit
-      if (canvasRef.current && canvasRef.current.applyMockEdit) {
-        canvasRef.current.applyMockEdit(prompt);
+      // Call Gemini API
+      const result = await generateImageWithGemini({
+        prompt,
+        baseImage: uploadedImages.length > 0 ? baseImage : undefined,
+        apiKey
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to generate image");
+      }
+
+      // Apply the generated image to canvas
+      if (canvasRef.current && result.imageData) {
+        canvasRef.current.loadGeneratedImage(result.imageData);
       }
       
-      // Mock edit result
+      // Add to history
       const newEdit: EditHistory = {
         id: Date.now().toString(),
         prompt,
         timestamp: Date.now(),
-        thumbnail: "/placeholder.svg",
-        imageData: "/placeholder.svg"
+        thumbnail: result.imageData || "/placeholder.svg",
+        imageData: result.imageData || "/placeholder.svg"
       };
       
       setEditHistory(prev => [newEdit, ...prev]);
       setProgress(100);
-      toast.success("Edit completed!");
+      toast.success("AI edit completed!");
       
     } catch (error) {
-      toast.error("Edit failed. Please try again.");
+      console.error("Edit error:", error);
+      toast.error(error instanceof Error ? error.message : "Edit failed. Please try again.");
     } finally {
       clearInterval(progressInterval);
       setIsProcessing(false);
       setProgress(0);
     }
-  }, [prompt]);
+  }, [prompt, apiKey, uploadedImages.length]);
 
   const handleExport = useCallback(() => {
     if (canvasRef.current) {
@@ -200,6 +219,23 @@ export const PhotoEditor = () => {
 
         {/* Right Sidebar - Panels */}
         <div className="w-80 bg-card border-l border-border flex flex-col">
+          {/* API Key Input */}
+          <div className="p-4 border-b border-border">
+            <label className="text-sm font-medium text-muted-foreground mb-2 block">
+              Gemini API Key
+            </label>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="Enter your Gemini API key..."
+              className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Get your API key from Google AI Studio
+            </p>
+          </div>
+          
           {/* Prompt Panel */}
           <PromptPanel
             prompt={prompt}

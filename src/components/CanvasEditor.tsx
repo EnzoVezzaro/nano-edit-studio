@@ -14,7 +14,8 @@ interface CanvasEditorProps {
 export interface CanvasEditorRef {
   exportImage: () => void;
   clear: () => void;
-  applyMockEdit: (prompt: string) => void;
+  getCanvasDataURL: () => string;
+  loadGeneratedImage: (imageDataUrl: string) => void;
 }
 
 export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
@@ -48,67 +49,63 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           fabricCanvas.renderAll();
         }
       },
-      applyMockEdit: (prompt: string) => {
+      getCanvasDataURL: () => {
+        if (!fabricCanvas) return '';
+        return fabricCanvas.toDataURL({
+          format: 'png',
+          quality: 1,
+          multiplier: 1
+        });
+      },
+      loadGeneratedImage: async (imageDataUrl: string) => {
         if (!fabricCanvas) return;
         
-        // Apply different mock visual effects based on the prompt content
-        if (prompt.toLowerCase().includes('color') || prompt.toLowerCase().includes('recolor')) {
-          // Add a colored overlay to simulate color changes
-          const overlay = new Rect({
-            left: 0,
-            top: 0,
-            width: fabricCanvas.width,
-            height: fabricCanvas.height,
-            fill: 'rgba(139, 92, 246, 0.2)', // Purple tint
+        try {
+          // Clear canvas except for annotations
+          const objects = fabricCanvas.getObjects();
+          const annotations = objects.filter(obj => 
+            (obj.type === 'rect' && obj.stroke) ||
+            (obj.type === 'circle' && obj.stroke) ||
+            obj.type === 'textbox'
+          );
+          
+          fabricCanvas.clear();
+          fabricCanvas.backgroundColor = '#1a1a1a';
+          
+          // Load the generated image
+          const img = await FabricImage.fromURL(imageDataUrl);
+          
+          // Scale to fit canvas
+          const canvasWidth = fabricCanvas.width!;
+          const canvasHeight = fabricCanvas.height!;
+          const scale = Math.min(
+            canvasWidth / img.width!,
+            canvasHeight / img.height!
+          ) * 0.8;
+          
+          img.scale(scale);
+          img.set({
+            left: (canvasWidth - img.getScaledWidth()) / 2,
+            top: (canvasHeight - img.getScaledHeight()) / 2,
             selectable: false,
             evented: false
           });
-          fabricCanvas.add(overlay);
-        } else if (prompt.toLowerCase().includes('remove') || prompt.toLowerCase().includes('erase')) {
-          // Add a semi-transparent overlay to simulate object removal
-          const removeOverlay = new Rect({
-            left: fabricCanvas.width! * 0.3,
-            top: fabricCanvas.height! * 0.3,
-            width: fabricCanvas.width! * 0.4,
-            height: fabricCanvas.height! * 0.4,
-            fill: 'rgba(255, 255, 255, 0.8)',
-            stroke: 'rgba(239, 68, 68, 0.5)',
-            strokeWidth: 2,
-            strokeDashArray: [5, 5],
-            selectable: false,
-            evented: false
+          
+          fabricCanvas.add(img);
+          fabricCanvas.sendObjectToBack(img);
+          
+          // Re-add annotations on top
+          annotations.forEach(annotation => {
+            fabricCanvas.add(annotation);
           });
-          fabricCanvas.add(removeOverlay);
-        } else if (prompt.toLowerCase().includes('background')) {
-          // Add a background effect
-          const bgEffect = new Circle({
-            left: fabricCanvas.width! * 0.5,
-            top: fabricCanvas.height! * 0.5,
-            radius: Math.min(fabricCanvas.width!, fabricCanvas.height!) * 0.3,
-            fill: 'rgba(34, 197, 94, 0.3)', // Green background effect
-            originX: 'center',
-            originY: 'center',
-            selectable: false,
-            evented: false
-          });
-          fabricCanvas.add(bgEffect);
-          fabricCanvas.sendObjectToBack(bgEffect);
-        } else {
-          // General enhancement effect - add a subtle glow
-          const enhanceOverlay = new Rect({
-            left: 0,
-            top: 0,
-            width: fabricCanvas.width,
-            height: fabricCanvas.height,
-            fill: 'rgba(6, 182, 212, 0.1)', // Cyan tint for enhancement
-            selectable: false,
-            evented: false
-          });
-          fabricCanvas.add(enhanceOverlay);
+          
+          fabricCanvas.renderAll();
+          toast.success("Generated image loaded!");
+          
+        } catch (error) {
+          console.error('Error loading generated image:', error);
+          toast.error('Failed to load generated image');
         }
-        
-        fabricCanvas.renderAll();
-        toast.success("Mock AI edit applied to canvas!");
       }
     }));
 
