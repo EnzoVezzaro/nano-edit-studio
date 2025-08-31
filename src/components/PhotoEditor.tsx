@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -56,8 +55,18 @@ export const PhotoEditor = () => {
   const [showLayers, setShowLayers] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [apiKey, setApiKey] = useState("");
+  const [provider, setProvider] = useState<"google" | "openrouter">("google"); // State for provider selection
   
-  const canvasRef = useRef<any>(null);
+  // Define a type for the canvas ref to satisfy ESLint and TypeScript errors
+  interface CanvasEditorRef {
+    getCanvasDataURL: () => string;
+    loadGeneratedImage: (imageData: string) => void;
+    exportImage: () => void; // Added exportImage method
+    clear: () => void; // Added clear method to resolve TS error
+  }
+  
+  // Use the defined ref type
+  const canvasRef = useRef<CanvasEditorRef>(null);
 
   const handleImageUpload = useCallback((files: File[]) => {
     setUploadedImages(prev => [...prev, ...files]);
@@ -71,7 +80,7 @@ export const PhotoEditor = () => {
     }
 
     if (!apiKey.trim()) {
-      toast.error("Please enter your Gemini API key");
+      toast.error(`Please enter your ${provider === "google" ? "Google" : "OpenRouter"} API key`);
       return;
     }
 
@@ -102,7 +111,8 @@ export const PhotoEditor = () => {
       const result = await generateImageWithGemini({
         prompt,
         baseImage: uploadedImages.length > 0 ? baseImage : undefined,
-        apiKey
+        apiKey,
+        provider // Pass the selected provider
       });
 
       if (!result.success) {
@@ -222,18 +232,34 @@ export const PhotoEditor = () => {
           {/* API Key Input */}
           <div className="p-4 border-b border-border">
             <label className="text-sm font-medium text-muted-foreground mb-2 block">
-              Gemini API Key
+              {provider === "google" ? "Google" : "OpenRouter"} API Key
             </label>
             <input
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Enter your Gemini API key..."
+              placeholder={`Enter your ${provider === "google" ? "Google" : "OpenRouter"} API key...`}
               className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Get your API key from Google AI Studio
+              Get your API key from {provider === "google" ? "Google AI Studio" : "OpenRouter"}
             </p>
+          </div>
+
+          {/* Provider Selection */}
+          <div className="p-4 border-b border-border">
+            <label htmlFor="provider-select" className="text-sm font-medium text-muted-foreground mb-2 block">
+              AI Provider
+            </label>
+            <select
+              id="provider-select"
+              value={provider}
+              onChange={(e) => setProvider(e.target.value as "google" | "openrouter")}
+              className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="google">Google Gemini</option>
+              <option value="openrouter">OpenRouter</option>
+            </select>
           </div>
           
           {/* Prompt Panel */}
