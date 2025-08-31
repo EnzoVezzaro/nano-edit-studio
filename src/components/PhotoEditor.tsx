@@ -99,7 +99,7 @@ export const PhotoEditor = () => {
     getCurrentImageDataURL: () => string;
     getOriginalImageDataURL: () => string;
     getAnnotationsData: () => AnnotationData[];
-    loadGeneratedImage: (imageData: string) => void;
+    loadGeneratedImage: (imageData: string, isHistoryLoad?: boolean) => void;
     exportImage: () => void; // Added exportImage method
     clear: () => void; // Added clear method to resolve TS error
     toggleAnnotationVisibility: (annotationId: number) => void;
@@ -468,7 +468,7 @@ export const PhotoEditor = () => {
               onHistorySelect={(edit) => {
                 // Restore the selected image to canvas
                 if (canvasRef.current && edit.imageData) {
-                  canvasRef.current.loadGeneratedImage(edit.imageData);
+                  canvasRef.current.loadGeneratedImage(edit.imageData, true); // Pass true for isHistoryLoad
                   toast.success(`Reverted to: ${edit.prompt}`);
                 }
               }}

@@ -245,7 +245,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           return baseData;
         });
       },
-      loadGeneratedImage: async (imageDataUrl: string) => {
+      loadGeneratedImage: async (imageDataUrl: string, isHistoryLoad: boolean = false) => {
         if (!fabricCanvas) return;
 
         try {
@@ -257,6 +257,8 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
             obj.type === 'text'
           );
 
+          // Clear baseImage state first to prevent old image from reloading
+          setBaseImage(null);
           fabricCanvas.clear();
           fabricCanvas.backgroundColor = '#1a1a1a';
 
@@ -278,7 +280,12 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
 
           fabricCanvas.add(img);
           fabricCanvas.sendObjectToBack(img);
-          setBaseImage(img); // Update baseImage to the newly loaded image
+
+          // Only set baseImage if this is NOT a history load
+          // This prevents the base image loading useEffect from interfering
+          if (!isHistoryLoad) {
+            setBaseImage(img);
+          }
 
           annotations.forEach(annotation => {
             fabricCanvas.add(annotation);
