@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { ItemProp } from "./KonvaCanvas";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -25,7 +26,7 @@ import {
   Layers,
   Palette
 } from "lucide-react";
-import { CanvasEditor } from "./CanvasEditor";
+import { KonvaCanvas } from "./KonvaCanvas";
 import { ImageUpload } from "./ImageUpload";
 import { ToolPanel } from "./ToolPanel";
 import { PromptPanel } from "./PromptPanel";
@@ -58,15 +59,23 @@ export const PhotoEditor = () => {
   const [provider, setProvider] = useState<"google" | "openrouter">("google"); // State for provider selection
   
   // Define a type for the canvas ref to satisfy ESLint and TypeScript errors
-  interface CanvasEditorRef {
-    getCanvasDataURL: () => string;
-    loadGeneratedImage: (imageData: string) => void;
-    exportImage: () => void; // Added exportImage method
-    clear: () => void; // Added clear method to resolve TS error
+  interface KonvaCanvasRef {
+    exportToImage: (fileName?: string, options?: any) => void;
+    exportToBASE64: () => string;
+    withdraw: () => void;
+    redo: () => void;
+    deleteItem: () => void;
+    canvasScale: (ratio: number) => void;
+    getItems: () => ItemProp[];
+    setSelectedIndex: (id: number) => void;
+    clearSelected: () => void;
   }
-  
+
   // Use the defined ref type
-  const canvasRef = useRef<CanvasEditorRef>(null);
+  const canvasRef = useRef<KonvaCanvasRef>(null);
+  const [canvasElements, setCanvasElements] = useState<ItemProp[]>([]);
+  const [stepInfo, setStepInfo] = useState<ItemProp[]>([]);
+  const [selectedItem, setSelectedItem] = useState<ItemProp | null>(null);
 
   const handleImageUpload = useCallback((files: File[]) => {
     setUploadedImages(prev => [...prev, ...files]);
@@ -105,8 +114,8 @@ export const PhotoEditor = () => {
 
     try {
       // Get current canvas as base64 for editing
-      const baseImage = canvasRef.current.getCanvasDataURL();
-      
+      const baseImage = canvasRef.current.exportToBASE64();
+
       // Call Gemini API
       const result = await generateImageWithGemini({
         prompt,
@@ -119,11 +128,9 @@ export const PhotoEditor = () => {
         throw new Error(result.error || "Failed to generate image");
       }
 
-      // Apply the generated image to canvas
-      if (canvasRef.current && result.imageData) {
-        canvasRef.current.loadGeneratedImage(result.imageData);
-      }
-      
+      // For now, we'll just show success since KonvaCanvas doesn't have loadGeneratedImage
+      toast.success("AI edit completed! (Note: Image loading not yet implemented in Konva version)");
+
       // Add to history
       const newEdit: EditHistory = {
         id: Date.now().toString(),
@@ -132,11 +139,10 @@ export const PhotoEditor = () => {
         thumbnail: result.imageData || "/placeholder.svg",
         imageData: result.imageData || "/placeholder.svg"
       };
-      
+
       setEditHistory(prev => [newEdit, ...prev]);
       setProgress(100);
-      toast.success("AI edit completed!");
-      
+
     } catch (error) {
       console.error("Edit error:", error);
       toast.error(error instanceof Error ? error.message : "Edit failed. Please try again.");
@@ -149,8 +155,34 @@ export const PhotoEditor = () => {
 
   const handleExport = useCallback(() => {
     if (canvasRef.current) {
-      canvasRef.current.exportImage();
+      canvasRef.current.exportToImage();
     }
+  }, []);
+
+  const handleRemoveElement = useCallback((element: ItemProp) => {
+    if (canvasRef.current) {
+      canvasRef.current.deleteItem();
+      setCanvasElements(prev => prev.filter(el => el !== element));
+      toast.success("Element removed");
+    }
+  }, []);
+
+  // Sync canvas elements with state
+  useEffect(() => {
+    const syncElements = () => {
+      if (canvasRef.current) {
+        const elements = canvasRef.current.getItems();
+        setCanvasElements(elements);
+      }
+    };
+
+    // Sync immediately
+    syncElements();
+
+    // Sync every 500ms to keep elements updated
+    const interval = setInterval(syncElements, 500);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -205,11 +237,20 @@ export const PhotoEditor = () => {
             <>
               {/* Canvas */}
               <div className="w-full h-full bg-canvas-bg relative overflow-hidden">
-                <CanvasEditor
-                  ref={canvasRef}
+                <KonvaCanvas
+                  width={window.innerWidth - 320} // Account for sidebars
+                  height={window.innerHeight - 120} // Account for header
                   images={uploadedImages}
                   baseImageIndex={baseImageIndex}
                   currentTool={currentTool}
+                  stepInfo={stepInfo}
+                  onChangeStep={setStepInfo}
+                  onChangeSelected={setSelectedItem}
+                  bindRef={(ref) => {
+                    if (ref && ref.current) {
+                      canvasRef.current = ref.current;
+                    }
+                  }}
                 />
               </div>
               
@@ -276,6 +317,8 @@ export const PhotoEditor = () => {
               images={uploadedImages}
               baseImageIndex={baseImageIndex}
               onBaseImageChange={setBaseImageIndex}
+              elements={canvasElements}
+              onRemoveElement={handleRemoveElement}
             />
           )}
           

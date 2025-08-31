@@ -1,26 +1,36 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Layers, 
-  Eye, 
-  EyeOff, 
+import {
+  Layers,
+  Eye,
+  EyeOff,
   Star,
   Image as ImageIcon,
-  Plus
+  Plus,
+  Square,
+  Circle,
+  Type,
+  Brush,
+  Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ItemProp } from "./KonvaCanvas";
 
 interface LayersPanelProps {
   images: File[];
   baseImageIndex: number;
   onBaseImageChange: (index: number) => void;
+  elements?: ItemProp[];
+  onRemoveElement?: (element: ItemProp) => void;
 }
 
-export const LayersPanel = ({ 
-  images, 
-  baseImageIndex, 
-  onBaseImageChange 
+export const LayersPanel = ({
+  images,
+  baseImageIndex,
+  onBaseImageChange,
+  elements = [],
+  onRemoveElement
 }: LayersPanelProps) => {
   return (
     <Card className="border-0 rounded-none border-t">
@@ -76,16 +86,85 @@ export const LayersPanel = ({
           </div>
         </div>
         
+        {/* Canvas Elements */}
+        {elements.length > 0 && (
+          <div>
+            <h4 className="text-sm font-medium mb-3 text-muted-foreground">Elements ({elements.length})</h4>
+            <div className="space-y-2">
+              {elements.map((element, index) => {
+                const getElementIcon = () => {
+                  switch (element.type) {
+                    case 'rect':
+                      return <Square className="w-4 h-4" />;
+                    case 'circle':
+                      return <Circle className="w-4 h-4" />;
+                    case 'textbox':
+                      return <Type className="w-4 h-4" />;
+                    case 'path':
+                      return <Brush className="w-4 h-4" />;
+                    default:
+                      return <Layers className="w-4 h-4" />;
+                  }
+                };
+
+                const getElementLabel = () => {
+                  switch (element.type) {
+                    case 'rect':
+                      return 'Rectangle';
+                    case 'circle':
+                      return 'Circle';
+                    case 'textbox':
+                      return 'Text';
+                    case 'path':
+                      return 'Drawing';
+                    default:
+                      return 'Element';
+                  }
+                };
+
+                return (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 transition-all"
+                  >
+                    <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center text-primary">
+                      {getElementIcon()}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium">
+                        {getElementLabel()} {index + 1}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Layer {index + 1}
+                      </div>
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-8 h-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => onRemoveElement?.(element)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Add More Images */}
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="w-full justify-start"
           size="sm"
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Reference Image
         </Button>
-        
+
         {/* Layer Info */}
         <div className="mt-6 p-3 bg-gradient-surface rounded-lg border border-border/50">
           <h5 className="text-xs font-medium mb-2 text-primary">ℹ️ Layer Tips</h5>

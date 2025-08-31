@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useRef, useImperativeHandle, useState } from "react";
-import { Canvas as FabricCanvas, Circle, Rect, FabricText, FabricImage, FabricObject } from "fabric";
+import { Canvas as FabricCanvas, Circle, Rect, FabricText, FabricImage, FabricObject, Textbox, Point } from "fabric";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, RotateCcw, RotateCw, Move } from "lucide-react";
 import type { Tool } from "./PhotoEditor";
@@ -16,6 +16,8 @@ export interface CanvasEditorRef {
   clear: () => void;
   getCanvasDataURL: () => string;
   loadGeneratedImage: (imageDataUrl: string) => void;
+  removeElement: (element: FabricObject) => void;
+  getElements: () => FabricObject[];
 }
 
 export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
@@ -26,6 +28,11 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
     const [zoom, setZoom] = useState(1);
     const [baseImage, setBaseImage] = useState<FabricImage | null>(null);
     const [isPanning, setIsPanning] = useState(false); // State for panning
+    const [isDrawingShape, setIsDrawingShape] = useState(false);
+    const [shapeStartPoint, setShapeStartPoint] = useState<{ x: number; y: number } | null>(null);
+    const [currentShapeObject, setCurrentShapeObject] = useState<FabricObject | null>(null);
+    const [elements, setElements] = useState<FabricObject[]>([]);
+    const [lastPointer, setLastPointer] = useState<{ x: number; y: number } | null>(null);
 
     useImperativeHandle(ref, () => ({
       exportImage: () => {
@@ -35,12 +42,12 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
             quality: 1,
             multiplier: 2
           });
-          
+
           const link = document.createElement('a');
           link.download = `photobanana-edit-${Date.now()}.png`;
           link.href = dataURL;
           link.click();
-          
+
           toast.success("Image exported successfully!");
         }
       },
@@ -49,6 +56,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           fabricCanvas.clear();
           fabricCanvas.backgroundColor = '#1a1a1a';
           fabricCanvas.renderAll();
+          setElements([]);
         }
       },
       getCanvasDataURL: () => {
@@ -61,22 +69,22 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       },
       loadGeneratedImage: async (imageDataUrl: string) => {
         if (!fabricCanvas) return;
-        
+
         try {
           // Clear canvas except for annotations
           const objects = fabricCanvas.getObjects();
-          const annotations = objects.filter(obj => 
+          const annotations = objects.filter(obj =>
             (obj.type === 'rect' && obj.stroke) ||
             (obj.type === 'circle' && obj.stroke) ||
             obj.type === 'textbox'
           );
-          
+
           fabricCanvas.clear();
           fabricCanvas.backgroundColor = '#1a1a1a';
-          
+
           // Load the generated image
           const img = await FabricImage.fromURL(imageDataUrl);
-          
+
           // Scale to fit canvas
           const canvasWidth = fabricCanvas.width!;
           const canvasHeight = fabricCanvas.height!;
@@ -84,7 +92,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
             canvasWidth / img.width!,
             canvasHeight / img.height!
           ) * 0.8;
-          
+
           img.scale(scale);
           img.set({
             left: (canvasWidth - img.getScaledWidth()) / 2,
@@ -92,22 +100,32 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
             selectable: false,
             evented: false
           });
-          
+
           fabricCanvas.add(img);
           fabricCanvas.sendObjectToBack(img);
-          
+
           // Re-add annotations on top
           annotations.forEach(annotation => {
             fabricCanvas.add(annotation);
           });
-          
+
           fabricCanvas.renderAll();
           toast.success("Generated image loaded!");
-          
+
         } catch (error) {
           console.error('Error loading generated image:', error);
           toast.error('Failed to load generated image');
         }
+      },
+      removeElement: (element: FabricObject) => {
+        if (fabricCanvas) {
+          fabricCanvas.remove(element);
+          setElements(prev => prev.filter(el => el !== element));
+          fabricCanvas.renderAll();
+        }
+      },
+      getElements: () => {
+        return elements;
       }
     }));
 
@@ -225,55 +243,77 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       fabricCanvas.renderAll();
     };
 
-    // Handle panning
+    // Handle panning and tool interactions
     useEffect(() => {
       if (!fabricCanvas) return;
 
       const handleMouseDown = (event: any) => {
+        const pointer = fabricCanvas.getPointer(event.e);
+
         if (currentTool === "move") {
           setIsPanning(true);
-          fabricCanvas.isDrawingMode = false; // Ensure drawing mode is off
-          fabricCanvas.selection = false; // Ensure selection is off
-          fabricCanvas.defaultCursor = 'grab'; // Change cursor to indicate panning
+          fabricCanvas.isDrawingMode = false;
+          fabricCanvas.selection = false;
+          fabricCanvas.defaultCursor = 'grab';
+          setLastPointer({ x: event.e.clientX, y: event.e.clientY });
         } else if (currentTool === "rectangle") {
-          const pointer = fabricCanvas.getScenePoint(event.e);
           const rect = new Rect({
-            left: pointer.x,
-            top: pointer.y,
+            left: pointer.x - 50,
+            top: pointer.y - 50,
             width: 100,
             height: 100,
             fill: 'transparent',
             stroke: '#8b5cf6',
             strokeWidth: 2,
+            selectable: true,
+            evented: true
           });
           fabricCanvas.add(rect);
+          setElements(prev => [...prev, rect]);
+          fabricCanvas.setActiveObject(rect);
         } else if (currentTool === "circle") {
-          const pointer = fabricCanvas.getScenePoint(event.e);
           const circle = new Circle({
-            left: pointer.x,
-            top: pointer.y,
+            left: pointer.x - 50,
+            top: pointer.y - 50,
             radius: 50,
             fill: 'transparent',
             stroke: '#8b5cf6',
             strokeWidth: 2,
+            selectable: true,
+            evented: true
           });
           fabricCanvas.add(circle);
+          setElements(prev => [...prev, circle]);
+          fabricCanvas.setActiveObject(circle);
         } else if (currentTool === "text") {
-          const pointer = fabricCanvas.getScenePoint(event.e);
-          const text = new FabricText('Edit me', {
+          const text = new Textbox('Click to edit', {
             left: pointer.x,
             top: pointer.y,
             fontFamily: 'Arial',
             fontSize: 20,
             fill: '#8b5cf6',
+            width: 200,
+            selectable: true,
+            evented: true
           });
           fabricCanvas.add(text);
+          setElements(prev => [...prev, text]);
+          fabricCanvas.setActiveObject(text);
+        } else if (currentTool === "eraser") {
+          const target = fabricCanvas.findTarget(event.e);
+          if (target && target !== baseImage) {
+            fabricCanvas.remove(target);
+            setElements(prev => prev.filter(el => el !== target));
+          }
         }
       };
 
       const handleMouseMove = (event: any) => {
-        if (isPanning) {
-          fabricCanvas.relativePan((event.e as PointerEvent).movementX, (event.e as PointerEvent).movementY);
+        if (isPanning && lastPointer) {
+          const deltaX = event.e.clientX - lastPointer.x;
+          const deltaY = event.e.clientY - lastPointer.y;
+          fabricCanvas.relativePan(new Point(deltaX, deltaY));
+          setLastPointer({ x: event.e.clientX, y: event.e.clientY });
           fabricCanvas.renderAll();
         }
       };
@@ -281,20 +321,35 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       const handleMouseUp = (event: any) => {
         if (isPanning) {
           setIsPanning(false);
-          fabricCanvas.defaultCursor = currentTool === 'select' ? 'default' : currentTool; // Reset cursor
+          fabricCanvas.defaultCursor = currentTool === 'select' ? 'default' : 'crosshair';
+          setLastPointer(null);
+        }
+      };
+
+      // Handle object selection for removal
+      const handleSelectionCreated = (event: fabric.IEvent) => {
+        if (currentTool === "eraser" && event.selected && event.selected.length > 0) {
+          event.selected.forEach((obj: FabricObject) => {
+            if (obj !== baseImage) {
+              fabricCanvas.remove(obj);
+              setElements(prev => prev.filter(el => el !== obj));
+            }
+          });
         }
       };
 
       fabricCanvas.on('mouse:down', handleMouseDown);
       fabricCanvas.on('mouse:move', handleMouseMove);
       fabricCanvas.on('mouse:up', handleMouseUp);
-      
+      fabricCanvas.on('selection:created', handleSelectionCreated);
+
       return () => {
         fabricCanvas.off('mouse:down', handleMouseDown);
         fabricCanvas.off('mouse:move', handleMouseMove);
         fabricCanvas.off('mouse:up', handleMouseUp);
+        fabricCanvas.off('selection:created', handleSelectionCreated);
       };
-    }, [fabricCanvas, currentTool, isPanning]); // Depend on isPanning to re-apply listeners
+    }, [fabricCanvas, currentTool, isPanning, lastPointer, baseImage]);
 
     return (
       <div className="relative w-full h-full flex items-center justify-center" ref={containerRef}>
