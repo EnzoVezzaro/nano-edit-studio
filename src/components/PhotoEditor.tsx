@@ -126,6 +126,25 @@ export const PhotoEditor = () => {
 
   const handleImageUpload = useCallback((files: File[]) => {
     setUploadedImages(prev => [...prev, ...files]);
+
+    // Save original image to history
+    if (files.length > 0 && canvasRef.current) {
+      // Wait a bit for the image to load, then save to history
+      setTimeout(() => {
+        if (canvasRef.current) {
+          const originalImageData = canvasRef.current.getCanvasDataURL();
+          const historyEntry: EditHistory = {
+            id: Date.now().toString(),
+            prompt: "Original image",
+            timestamp: Date.now(),
+            thumbnail: originalImageData,
+            imageData: originalImageData
+          };
+          setEditHistory([historyEntry]); // Reset history with just the original
+        }
+      }, 1000); // Wait for image to load
+    }
+
     toast.success(`Uploaded ${files.length} image(s)`);
   }, []);
 
@@ -160,19 +179,28 @@ export const PhotoEditor = () => {
     }, 500);
 
     try {
-      // Get current canvas image (including latest generated image) as base64 for editing
+      // Get current canvas image (including annotations) for AI processing
       const currentImage = canvasRef.current.getCanvasDataURL();
 
       // Get annotations data
       const annotations = canvasRef.current.getAnnotationsData();
 
-      // Create enhanced prompt with annotations
+      // Create enhanced prompt with ONLY visible annotations
       let enhancedPrompt = prompt;
 
-      if (annotations.length > 0) {
-        enhancedPrompt += "\n\nCanvas Annotations:\n";
+      // Filter to only visible annotations
+      const visibleAnnotations = annotations.filter(annotation => annotation.visible !== false);
 
-        annotations.forEach(annotation => {
+      console.log('Sending to AI:', {
+        imageDataLength: currentImage.length,
+        annotationCount: visibleAnnotations.length,
+        annotations: visibleAnnotations
+      });
+
+      if (visibleAnnotations.length > 0) {
+        enhancedPrompt += "\n\nCanvas Annotations (Visible Only):\n";
+
+        visibleAnnotations.forEach(annotation => {
           switch (annotation.type) {
             case 'rect':
               enhancedPrompt += `• Rectangle ${annotation.id}: Position (${annotation.position.x}%, ${annotation.position.y}%), Size ${annotation.width}x${annotation.height}px`;
@@ -202,7 +230,12 @@ export const PhotoEditor = () => {
           }
         });
 
-        enhancedPrompt += "\n\nIMPORTANT: These canvas annotations are for REFERENCE ONLY to help you understand what changes are needed. DO NOT include these annotation shapes, rectangles, circles, or text elements in your final generated image. The annotations are temporary drawing tools to guide your image generation - they should not appear in the output image.";
+        enhancedPrompt += "\n\n⚠️ CRITICAL INSTRUCTION: The annotations on the canvas are for REFERENCE ONLY!";
+        enhancedPrompt += "\n• DO NOT draw or include any rectangles, circles, arrows, or text annotations in your output";
+        enhancedPrompt += "\n• These are temporary drawing tools to show you WHERE to make changes";
+        enhancedPrompt += "\n• Generate a clean, natural image WITHOUT any annotation shapes or marks";
+        enhancedPrompt += "\n• Focus only on the requested modifications to the original image content";
+        enhancedPrompt += "\n• The final result should look like a normal photograph without any drawing overlays";
       }
 
       // Call Gemini API with current canvas image and enhanced prompt
@@ -224,18 +257,19 @@ export const PhotoEditor = () => {
       // Apply the generated image to canvas
       if (canvasRef.current && result.imageData) {
         canvasRef.current.loadGeneratedImage(result.imageData);
+
+        // Save the generated image to history AFTER successful generation
+        const historyEntry: EditHistory = {
+          id: Date.now().toString(),
+          prompt: prompt,
+          timestamp: Date.now(),
+          thumbnail: result.imageData,
+          imageData: result.imageData
+        };
+
+        setEditHistory(prev => [historyEntry, ...prev]);
       }
-      
-      // Add to history
-      const newEdit: EditHistory = {
-        id: Date.now().toString(),
-        prompt,
-        timestamp: Date.now(),
-        thumbnail: result.imageData || "/placeholder.svg",
-        imageData: result.imageData || "/placeholder.svg"
-      };
-      
-      setEditHistory(prev => [newEdit, ...prev]);
+
       setProgress(100);
       toast.success("AI edit completed!");
       
@@ -427,7 +461,11 @@ export const PhotoEditor = () => {
             <HistoryPanel
               history={editHistory}
               onHistorySelect={(edit) => {
-                toast.success(`Reverted to: ${edit.prompt}`);
+                // Restore the selected image to canvas
+                if (canvasRef.current && edit.imageData) {
+                  canvasRef.current.loadGeneratedImage(edit.imageData);
+                  toast.success(`Reverted to: ${edit.prompt}`);
+                }
               }}
             />
           )}
