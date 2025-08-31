@@ -78,6 +78,8 @@ interface OpenRouterMessage {
 
 interface OpenRouterChoice {
   message: OpenRouterMessage;
+  finish_reason?: string;
+  native_finish_reason?: string;
 }
 
 interface OpenRouterResponse {
@@ -191,8 +193,15 @@ export async function generateImageWithGemini({
       }
     } else if (provider === "openrouter") {
       const openRouterData = data as OpenRouterResponse;
-      const message = openRouterData.choices?.[0]?.message;
-      
+      const choice = openRouterData.choices?.[0];
+
+      // Check for content filter errors
+      if (choice?.finish_reason === "content_filter" || choice?.native_finish_reason === "PROHIBITED_CONTENT") {
+        throw new Error("Content was flagged by AI safety filter. Please try a different prompt or image.");
+      }
+
+      const message = choice?.message;
+
       let imageData: string | undefined;
 
       // Prioritize checking the 'images' array first, as seen in the provided JSON

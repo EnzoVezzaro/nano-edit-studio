@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -54,8 +54,12 @@ export const PhotoEditor = () => {
   const [editHistory, setEditHistory] = useState<EditHistory[]>([]);
   const [showLayers, setShowLayers] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
-  const [apiKey, setApiKey] = useState("");
-  const [provider, setProvider] = useState<"google" | "openrouter">("google"); // State for provider selection
+  const [apiKey, setApiKey] = useState(() => {
+    return localStorage.getItem("photobanana-api-key") || "";
+  });
+  const [provider, setProvider] = useState<"google" | "openrouter">(() => {
+    return (localStorage.getItem("photobanana-provider") as "google" | "openrouter") || "google";
+  });
   
   // Define a type for the canvas ref to satisfy ESLint and TypeScript errors
   interface CanvasEditorRef {
@@ -67,6 +71,20 @@ export const PhotoEditor = () => {
   
   // Use the defined ref type
   const canvasRef = useRef<CanvasEditorRef>(null);
+
+  // Save API key to localStorage whenever it changes
+  useEffect(() => {
+    if (apiKey) {
+      localStorage.setItem("photobanana-api-key", apiKey);
+    } else {
+      localStorage.removeItem("photobanana-api-key");
+    }
+  }, [apiKey]);
+
+  // Save provider to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem("photobanana-provider", provider);
+  }, [provider]);
 
   const handleImageUpload = useCallback((files: File[]) => {
     setUploadedImages(prev => [...prev, ...files]);
@@ -116,6 +134,10 @@ export const PhotoEditor = () => {
       });
 
       if (!result.success) {
+        // Handle specific content filter errors
+        if (result.error?.includes("content_filter") || result.error?.includes("PROHIBITED_CONTENT")) {
+          throw new Error("The content was flagged by the AI safety filter. Please try a different prompt or image.");
+        }
         throw new Error(result.error || "Failed to generate image");
       }
 

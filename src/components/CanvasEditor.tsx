@@ -30,18 +30,76 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
     useImperativeHandle(ref, () => ({
       exportImage: () => {
         if (fabricCanvas) {
-          const dataURL = fabricCanvas.toDataURL({
-            format: 'png',
-            quality: 1,
-            multiplier: 2
-          });
-          
-          const link = document.createElement('a');
-          link.download = `photobanana-edit-${Date.now()}.png`;
-          link.href = dataURL;
-          link.click();
-          
-          toast.success("Image exported successfully!");
+          // Find all image objects and get the most recent one (should be the generated image)
+          const objects = fabricCanvas.getObjects();
+          const imageObjects = objects.filter(obj => obj.type === 'image') as FabricImage[];
+
+          if (imageObjects.length > 0) {
+            // Get the last (most recent) image object, which should be the generated one
+            const baseImage = imageObjects[imageObjects.length - 1];
+
+            // Create a temporary canvas to export only the image
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d')!;
+
+            // Set canvas size to match the image
+            const imgWidth = baseImage.getScaledWidth();
+            const imgHeight = baseImage.getScaledHeight();
+            tempCanvas.width = imgWidth;
+            tempCanvas.height = imgHeight;
+
+            // Get the image element
+            const imgElement = baseImage.getElement() as HTMLImageElement;
+
+            // Draw the base image
+            tempCtx.drawImage(imgElement, 0, 0, imgWidth, imgHeight);
+
+            // Draw annotations on top if they exist
+            objects.forEach(obj => {
+              if (obj !== baseImage && obj.visible) {
+                // Calculate relative position to the image
+                const relativeLeft = obj.left! - baseImage.left!;
+                const relativeTop = obj.top! - baseImage.top!;
+
+                if (obj.type === 'rect') {
+                  const rect = obj as Rect;
+                  tempCtx.strokeStyle = (rect.stroke as string) || '#000000';
+                  tempCtx.lineWidth = (rect.strokeWidth || 1) * (imgWidth / baseImage.width!);
+                  tempCtx.strokeRect(relativeLeft, relativeTop, rect.width!, rect.height!);
+                } else if (obj.type === 'circle') {
+                  const circle = obj as Circle;
+                  tempCtx.strokeStyle = (circle.stroke as string) || '#000000';
+                  tempCtx.lineWidth = (circle.strokeWidth || 1) * (imgWidth / baseImage.width!);
+                  tempCtx.beginPath();
+                  tempCtx.arc(
+                    relativeLeft + circle.radius!,
+                    relativeTop + circle.radius!,
+                    circle.radius!,
+                    0,
+                    2 * Math.PI
+                  );
+                  tempCtx.stroke();
+                } else if (obj.type === 'textbox' || obj.type === 'text') {
+                  const text = obj as FabricText;
+                  tempCtx.fillStyle = (text.fill as string) || '#000000';
+                  tempCtx.font = `${text.fontSize! * (imgWidth / baseImage.width!)}px ${text.fontFamily || 'Arial'}`;
+                  tempCtx.fillText(text.text!, relativeLeft, relativeTop + text.fontSize!);
+                }
+              }
+            });
+
+            // Export the composited image
+            const dataURL = tempCanvas.toDataURL('image/png', 1.0);
+
+            const link = document.createElement('a');
+            link.download = `photobanana-edit-${Date.now()}.png`;
+            link.href = dataURL;
+            link.click();
+
+            toast.success("Image exported successfully!");
+          } else {
+            toast.error("No image found to export");
+          }
         }
       },
       clear: () => {
@@ -229,6 +287,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
     useEffect(() => {
       if (!fabricCanvas) return;
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const handleMouseDown = (event: any) => {
         if (currentTool === "move") {
           setIsPanning(true);
@@ -236,7 +295,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           fabricCanvas.selection = false; // Ensure selection is off
           fabricCanvas.defaultCursor = 'grab'; // Change cursor to indicate panning
         } else if (currentTool === "rectangle") {
-          const pointer = fabricCanvas.getScenePoint(event.e);
+          const pointer = fabricCanvas.getPointer(event);
           const rect = new Rect({
             left: pointer.x,
             top: pointer.y,
@@ -248,7 +307,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           });
           fabricCanvas.add(rect);
         } else if (currentTool === "circle") {
-          const pointer = fabricCanvas.getScenePoint(event.e);
+          const pointer = fabricCanvas.getPointer(event);
           const circle = new Circle({
             left: pointer.x,
             top: pointer.y,
@@ -259,7 +318,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           });
           fabricCanvas.add(circle);
         } else if (currentTool === "text") {
-          const pointer = fabricCanvas.getScenePoint(event.e);
+          const pointer = fabricCanvas.getPointer(event);
           const text = new FabricText('Edit me', {
             left: pointer.x,
             top: pointer.y,
@@ -271,6 +330,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         }
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const handleMouseMove = (event: any) => {
         if (isPanning) {
           fabricCanvas.relativePan((event.e as PointerEvent).movementX, (event.e as PointerEvent).movementY);
@@ -278,6 +338,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         }
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const handleMouseUp = (event: any) => {
         if (isPanning) {
           setIsPanning(false);
