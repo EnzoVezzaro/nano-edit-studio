@@ -34,7 +34,7 @@ import { LayersPanel } from "./LayersPanel";
 import { toast } from "sonner";
 import { generateImageWithGemini } from "@/lib/gemini";
 
-export type Tool = "select" | "brush" | "eraser" | "rectangle" | "circle" | "text";
+export type Tool = "select" | "brush" | "eraser" | "rectangle" | "circle" | "text" | "move";
 
 export interface EditHistory {
   id: string;
@@ -204,7 +204,7 @@ export const PhotoEditor = () => {
           ) : (
             <>
               {/* Canvas */}
-              <div className="flex-1 bg-canvas-bg relative overflow-hidden">
+              <div className="w-full h-full bg-canvas-bg relative overflow-hidden">
                 <CanvasEditor
                   ref={canvasRef}
                   images={uploadedImages}

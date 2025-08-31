@@ -21,9 +21,11 @@ export interface CanvasEditorRef {
 export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
   ({ images, baseImageIndex, currentTool }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null); // Ref for the container
     const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
     const [zoom, setZoom] = useState(1);
     const [baseImage, setBaseImage] = useState<FabricImage | null>(null);
+    const [isPanning, setIsPanning] = useState(false); // State for panning
 
     useImperativeHandle(ref, () => ({
       exportImage: () => {
@@ -109,13 +111,24 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       }
     }));
 
-    // Initialize canvas
+    // Initialize canvas and handle resizing
     useEffect(() => {
-      if (!canvasRef.current) return;
+      if (!canvasRef.current || !containerRef.current) return;
+
+      const updateCanvasSize = () => {
+        const containerWidth = containerRef.current!.clientWidth;
+        const containerHeight = containerRef.current!.clientHeight;
+        
+        if (fabricCanvas) {
+          fabricCanvas.setWidth(containerWidth);
+          fabricCanvas.setHeight(containerHeight);
+          fabricCanvas.renderAll();
+        }
+      };
 
       const canvas = new FabricCanvas(canvasRef.current, {
-        width: 800,
-        height: 600,
+        width: containerRef.current.clientWidth,
+        height: containerRef.current.clientHeight,
         backgroundColor: '#1a1a1a',
       });
 
@@ -124,10 +137,18 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       
       setFabricCanvas(canvas);
 
+      // Set initial size
+      updateCanvasSize();
+
+      // Observe container for size changes
+      const resizeObserver = new ResizeObserver(updateCanvasSize);
+      resizeObserver.observe(containerRef.current);
+
       return () => {
         canvas.dispose();
+        resizeObserver.unobserve(containerRef.current!);
       };
-    }, []);
+    }, []); // Empty dependency array ensures this runs only once on mount
 
     // Load base image
     useEffect(() => {
@@ -204,12 +225,17 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       fabricCanvas.renderAll();
     };
 
-    // Handle canvas clicks for shape tools
+    // Handle panning
     useEffect(() => {
       if (!fabricCanvas) return;
 
       const handleMouseDown = (event: any) => {
-        if (currentTool === "rectangle") {
+        if (currentTool === "move") {
+          setIsPanning(true);
+          fabricCanvas.isDrawingMode = false; // Ensure drawing mode is off
+          fabricCanvas.selection = false; // Ensure selection is off
+          fabricCanvas.defaultCursor = 'grab'; // Change cursor to indicate panning
+        } else if (currentTool === "rectangle") {
           const pointer = fabricCanvas.getScenePoint(event.e);
           const rect = new Rect({
             left: pointer.x,
@@ -245,15 +271,33 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         }
       };
 
+      const handleMouseMove = (event: any) => {
+        if (isPanning) {
+          fabricCanvas.relativePan((event.e as PointerEvent).movementX, (event.e as PointerEvent).movementY);
+          fabricCanvas.renderAll();
+        }
+      };
+
+      const handleMouseUp = (event: any) => {
+        if (isPanning) {
+          setIsPanning(false);
+          fabricCanvas.defaultCursor = currentTool === 'select' ? 'default' : currentTool; // Reset cursor
+        }
+      };
+
       fabricCanvas.on('mouse:down', handleMouseDown);
+      fabricCanvas.on('mouse:move', handleMouseMove);
+      fabricCanvas.on('mouse:up', handleMouseUp);
       
       return () => {
         fabricCanvas.off('mouse:down', handleMouseDown);
+        fabricCanvas.off('mouse:move', handleMouseMove);
+        fabricCanvas.off('mouse:up', handleMouseUp);
       };
-    }, [fabricCanvas, currentTool]);
+    }, [fabricCanvas, currentTool, isPanning]); // Depend on isPanning to re-apply listeners
 
     return (
-      <div className="relative w-full h-full flex items-center justify-center">
+      <div className="relative w-full h-full flex items-center justify-center" ref={containerRef}>
         {/* Canvas Controls */}
         <div className="absolute top-4 right-4 z-10 flex gap-2">
           <Button
@@ -278,10 +322,9 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         </div>
 
         {/* Canvas */}
-        <div className="border border-border rounded-lg overflow-hidden shadow-panel">
+        <div className="border border-border rounded-lg shadow-panel">
           <canvas 
             ref={canvasRef} 
-            className="max-w-full max-h-full"
           />
         </div>
       </div>
