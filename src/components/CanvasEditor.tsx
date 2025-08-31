@@ -51,6 +51,7 @@ export interface CanvasEditorRef {
   toggleAnnotationVisibility: (annotationId: number) => void;
   removeAnnotation: (annotationId: number) => void;
   setOnAnnotationsChange: (callback: (annotations: AnnotationData[]) => void) => void;
+  addText: (text: string) => void;
 }
 
 export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
@@ -297,6 +298,25 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
             }
           }
         }
+      },
+      addText: (text: string) => {
+        if (!fabricCanvas) return;
+
+        const textObj = new FabricText(text || 'Your text here', {
+          left: fabricCanvas.width! / 2,
+          top: fabricCanvas.height! / 2,
+          fontFamily: 'Arial',
+          fontSize: 20,
+          fill: '#8b5cf6',
+          selectable: true,
+          evented: true,
+          originX: 'center',
+          originY: 'center',
+        });
+
+        fabricCanvas.add(textObj);
+        fabricCanvas.setActiveObject(textObj);
+        fabricCanvas.renderAll();
       }
     }));
 
@@ -614,20 +634,8 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           fabricCanvas.add(circle);
           fabricCanvas.setActiveObject(circle);
         } else if (currentTool === "text") {
-          const text = new FabricText('Edit me', {
-            left: fabricCanvas.width! / 2,
-            top: fabricCanvas.height! / 2,
-            fontFamily: 'Arial',
-            fontSize: 20,
-            fill: '#8b5cf6',
-            selectable: true,
-            evented: true,
-            editable: true,
-            originX: 'center',
-            originY: 'center',
-          });
-          fabricCanvas.add(text);
-          fabricCanvas.setActiveObject(text);
+          // Don't add text directly - let the parent handle text input prompt
+          // The parent component will call a method to add text with user input
         }
       };
 

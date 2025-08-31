@@ -56,10 +56,26 @@ export const PhotoEditor = () => {
   }, []);
 
   // Handle tool changes and refresh annotations
-  const handleToolChange = useCallback((tool: Tool) => {
+  const handleToolChange = useCallback(async (tool: Tool) => {
     setCurrentTool(tool);
-    // Refresh annotations after a short delay to allow canvas to update
-    setTimeout(refreshAnnotations, 100);
+
+    // Special handling for text tool - prompt for text input first
+    if (tool === "text") {
+      const userInput = window.prompt("Enter the text you want to add to the canvas:");
+
+      if (userInput && userInput.trim()) {
+        // Add text to canvas with user input
+        if (canvasRef.current) {
+          canvasRef.current.addText(userInput.trim());
+        }
+      }
+
+      // Reset tool to select after adding text
+      setCurrentTool("select");
+    } else {
+      // Refresh annotations after a short delay to allow canvas to update
+      setTimeout(refreshAnnotations, 100);
+    }
   }, [refreshAnnotations]);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [baseImageIndex, setBaseImageIndex] = useState(0);
@@ -88,6 +104,7 @@ export const PhotoEditor = () => {
     toggleAnnotationVisibility: (annotationId: number) => void;
     removeAnnotation: (annotationId: number) => void;
     setOnAnnotationsChange: (callback: (annotations: AnnotationData[]) => void) => void;
+    addText: (text: string) => void;
   }
   
   // Use the defined ref type
