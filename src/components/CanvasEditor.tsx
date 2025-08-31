@@ -45,6 +45,7 @@ export interface CanvasEditorRef {
   exportImage: () => void;
   clear: () => void;
   getCanvasDataURL: () => string;
+  getCurrentImageDataURL: () => string;
   getOriginalImageDataURL: () => string;
   getAnnotationsData: () => AnnotationData[];
   loadGeneratedImage: (imageDataUrl: string) => void;
@@ -144,6 +145,31 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           quality: 1,
           multiplier: 1
         });
+      },
+      getCurrentImageDataURL: () => {
+        if (!fabricCanvas) return '';
+
+        // Get all objects on canvas
+        const objects = fabricCanvas.getObjects();
+
+        // Find the base image (the last image object, which should be the current one)
+        const imageObjects = objects.filter(obj => obj.type === 'image') as FabricImage[];
+
+        if (imageObjects.length === 0) return '';
+
+        const currentImage = imageObjects[imageObjects.length - 1];
+
+        // Create a temporary canvas to extract just the image data
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d')!;
+        tempCanvas.width = currentImage.width!;
+        tempCanvas.height = currentImage.height!;
+
+        // Get the image element and draw it to the temp canvas
+        const imgElement = currentImage.getElement() as HTMLImageElement;
+        tempCtx.drawImage(imgElement, 0, 0, currentImage.width!, currentImage.height!);
+
+        return tempCanvas.toDataURL('image/png', 1.0);
       },
       getOriginalImageDataURL: () => {
         if (!baseImage) return '';
@@ -252,6 +278,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
 
           fabricCanvas.add(img);
           fabricCanvas.sendObjectToBack(img);
+          setBaseImage(img); // Update baseImage to the newly loaded image
 
           annotations.forEach(annotation => {
             fabricCanvas.add(annotation);

@@ -96,6 +96,7 @@ export const PhotoEditor = () => {
   // Define a type for the canvas ref to satisfy ESLint and TypeScript errors
   interface CanvasEditorRef {
     getCanvasDataURL: () => string;
+    getCurrentImageDataURL: () => string;
     getOriginalImageDataURL: () => string;
     getAnnotationsData: () => AnnotationData[];
     loadGeneratedImage: (imageData: string) => void;
@@ -160,8 +161,8 @@ export const PhotoEditor = () => {
     }, 500);
 
     try {
-      // Get current canvas image (including annotations) for AI processing
-      const currentImage = canvasRef.current.getCanvasDataURL();
+      // Get current image loaded in canvas (without annotations) for AI processing
+      const currentImage = canvasRef.current.getCurrentImageDataURL();
 
       // Get annotations data
       const annotations = canvasRef.current.getAnnotationsData();
