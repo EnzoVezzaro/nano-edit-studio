@@ -126,25 +126,6 @@ export const PhotoEditor = () => {
 
   const handleImageUpload = useCallback((files: File[]) => {
     setUploadedImages(prev => [...prev, ...files]);
-
-    // Save original image to history
-    if (files.length > 0 && canvasRef.current) {
-      // Wait a bit for the image to load, then save to history
-      setTimeout(() => {
-        if (canvasRef.current) {
-          const originalImageData = canvasRef.current.getCanvasDataURL();
-          const historyEntry: EditHistory = {
-            id: Date.now().toString(),
-            prompt: "Original image",
-            timestamp: Date.now(),
-            thumbnail: originalImageData,
-            imageData: originalImageData
-          };
-          setEditHistory([historyEntry]); // Reset history with just the original
-        }
-      }, 1000); // Wait for image to load
-    }
-
     toast.success(`Uploaded ${files.length} image(s)`);
   }, []);
 
@@ -313,6 +294,29 @@ export const PhotoEditor = () => {
     refreshAnnotations();
     toast.success("Layers refreshed");
   }, [refreshAnnotations]);
+
+  // Save original image to history when uploaded
+  useEffect(() => {
+    if (uploadedImages.length > 0 && canvasRef.current && editHistory.length === 0) {
+      // Small delay to ensure image is fully loaded
+      const timeoutId = setTimeout(() => {
+        if (canvasRef.current) {
+          const originalImageData = canvasRef.current.getCanvasDataURL();
+          const historyEntry: EditHistory = {
+            id: Date.now().toString(),
+            prompt: "Original image",
+            timestamp: Date.now(),
+            thumbnail: originalImageData,
+            imageData: originalImageData
+          };
+          setEditHistory([historyEntry]);
+          console.log('Original image saved to history');
+        }
+      }, 1500); // Increased delay to ensure image is fully loaded
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [uploadedImages, canvasRef.current, editHistory.length]);
 
   // Update annotations when canvas changes
   useEffect(() => {
