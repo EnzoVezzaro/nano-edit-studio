@@ -160,8 +160,8 @@ export const PhotoEditor = () => {
     }, 500);
 
     try {
-      // Get original image (without annotations) as base64 for editing
-      const originalImage = canvasRef.current.getOriginalImageDataURL();
+      // Get current canvas image (including latest generated image) as base64 for editing
+      const currentImage = canvasRef.current.getCanvasDataURL();
 
       // Get annotations data
       const annotations = canvasRef.current.getAnnotationsData();
@@ -205,10 +205,10 @@ export const PhotoEditor = () => {
         enhancedPrompt += "\n\nIMPORTANT: These canvas annotations are for REFERENCE ONLY to help you understand what changes are needed. DO NOT include these annotation shapes, rectangles, circles, or text elements in your final generated image. The annotations are temporary drawing tools to guide your image generation - they should not appear in the output image.";
       }
 
-      // Call Gemini API with original image and enhanced prompt
+      // Call Gemini API with current canvas image and enhanced prompt
       const result = await generateImageWithGemini({
         prompt: enhancedPrompt,
-        baseImage: uploadedImages.length > 0 ? originalImage : undefined,
+        baseImage: uploadedImages.length > 0 ? currentImage : undefined,
         apiKey,
         provider // Pass the selected provider
       });
