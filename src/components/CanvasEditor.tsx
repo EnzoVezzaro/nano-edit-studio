@@ -59,9 +59,8 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
         backgroundColor: '#1a1a1a',
       });
 
-      // Configure canvas
-      canvas.freeDrawingBrush.color = '#8b5cf6';
-      canvas.freeDrawingBrush.width = 3;
+      // Configure canvas for drawing mode - Fabric.js v6 syntax
+      canvas.isDrawingMode = false;
       
       setFabricCanvas(canvas);
 
@@ -124,9 +123,14 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
       fabricCanvas.isDrawingMode = currentTool === "brush";
       fabricCanvas.selection = currentTool === "select";
       
-      if (currentTool === "brush") {
-        fabricCanvas.freeDrawingBrush.color = '#8b5cf6';
-        fabricCanvas.freeDrawingBrush.width = 3;
+      // Configure brush properties when in drawing mode
+      if (currentTool === "brush" && fabricCanvas.isDrawingMode) {
+        // In Fabric.js v6, we need to configure the brush differently
+        const brush = fabricCanvas.freeDrawingBrush;
+        if (brush) {
+          brush.color = '#8b5cf6';
+          brush.width = 3;
+        }
       }
     }, [currentTool, fabricCanvas]);
 
