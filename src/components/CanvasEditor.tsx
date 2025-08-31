@@ -227,7 +227,8 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
           const annotations = objects.filter(obj =>
             (obj.type === 'rect' && obj.stroke) ||
             (obj.type === 'circle' && obj.stroke) ||
-            obj.type === 'textbox'
+            obj.type === 'textbox' ||
+            obj.type === 'text'
           );
 
           fabricCanvas.clear();
