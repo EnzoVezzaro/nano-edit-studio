@@ -32,9 +32,11 @@ export const ImageUpload = ({ onImageUpload }: ImageUploadProps) => {
   return (
     <div className="w-full max-w-2xl mx-auto p-8">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-primary">
-          <Sparkles className="w-8 h-8 text-primary-foreground" />
-        </div>
+        <img
+          src="/assets/img/logo-icon.png"
+          alt="PhotoBanana Logo"
+          className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-primary"
+        />
         <h2 className="text-3xl font-bold mb-2 bg-gradient-primary bg-clip-text text-transparent">
           Welcome to PhotoBanana
         </h2>
@@ -76,7 +78,7 @@ export const ImageUpload = ({ onImageUpload }: ImageUploadProps) => {
           </h3>
           
           <p className="text-muted-foreground mb-6">
-            Drag & drop up to 5 images, or click to browse
+            Drag & drop up your image, or click to browse
           </p>
           
           <Button 
