@@ -391,6 +391,7 @@ export const PhotoEditor = () => {
                   images={uploadedImages}
                   baseImageIndex={baseImageIndex}
                   currentTool={currentTool}
+                  onBaseImageIndexChange={setBaseImageIndex}
                 />
               </div>
               

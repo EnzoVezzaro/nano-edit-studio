@@ -9,6 +9,7 @@ interface CanvasEditorProps {
   images: File[];
   baseImageIndex: number;
   currentTool: Tool;
+  onBaseImageIndexChange?: (index: number) => void;
 }
 
 export interface AnnotationData {
@@ -56,7 +57,7 @@ export interface CanvasEditorRef {
 }
 
 export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
-  ({ images, baseImageIndex, currentTool }, ref) => {
+  ({ images, baseImageIndex, currentTool, onBaseImageIndexChange }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
@@ -259,6 +260,8 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
 
           // Clear baseImage state first to prevent old image from reloading
           setBaseImage(null);
+          // Set baseImageIndex to -1 to prevent the base image loading effect from running
+          onBaseImageIndexChange?.(-1);
           fabricCanvas.clear();
           fabricCanvas.backgroundColor = '#1a1a1a';
 
@@ -513,7 +516,7 @@ export const CanvasEditor = forwardRef<CanvasEditorRef, CanvasEditorProps>(
 
     // Load base image
     useEffect(() => {
-      if (!fabricCanvas || !images[baseImageIndex]) return;
+      if (!fabricCanvas || !images[baseImageIndex] || baseImageIndex === -1) return;
 
       const file = images[baseImageIndex];
       const reader = new FileReader();
