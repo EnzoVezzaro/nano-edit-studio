@@ -437,9 +437,20 @@ export const PhotoEditor = () => {
               placeholder={`Enter your ${provider === "google" ? "Google" : "OpenRouter"} API key...`}
               className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Get your API key from {provider === "google" ? "Google AI Studio" : "OpenRouter"}
-            </p>
+            <div className="text-xs text-muted-foreground mt-1">
+              <p className="mb-1">For now you need to plug your own api keys.</p>
+              <p>
+                {provider === "google" ? (
+                  <>
+                    Google: <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">https://aistudio.google.com/app/apikey</a>
+                  </>
+                ) : (
+                  <>
+                    OpenRouter: <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">https://openrouter.ai/settings/keys</a>
+                  </>
+                )}
+              </p>
+            </div>
           </div>
 
           {/* Provider Selection */}
