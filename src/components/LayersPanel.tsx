@@ -205,7 +205,7 @@ export const LayersPanel = ({
           Add Reference Image (next release)
         </Button>
         
-        {/* Layer Info */}
+        {/* Layer Info 
         <div className="mt-6 p-3 bg-gradient-surface rounded-lg border border-border/50">
           <h5 className="text-xs font-medium mb-2 text-primary">ℹ️ Layer Tips</h5>
           <ul className="text-xs text-muted-foreground space-y-1">
@@ -214,6 +214,7 @@ export const LayersPanel = ({
             <li>• Multiple images enable fusion effects</li>
           </ul>
         </div>
+        */}
       </CardContent>
     </Card>
   );
