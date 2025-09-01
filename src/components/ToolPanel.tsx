@@ -42,9 +42,9 @@ export const ToolPanel = ({ currentTool, onToolChange }: ToolPanelProps) => {
                 size="sm"
                 className={cn(
                   "w-10 h-10 p-0 transition-all duration-200",
-                  isActive 
-                    ? "bg-gradient-primary shadow-primary text-primary-foreground" 
-                    : "hover:bg-muted hover:shadow-sm"
+                  isActive
+                    ? "bg-gradient-primary shadow-primary text-primary-foreground"
+                    : "hover:bg-accent hover:text-accent-foreground hover:shadow-sm"
                 )}
                 onClick={() => onToolChange(tool.id)}
               >
