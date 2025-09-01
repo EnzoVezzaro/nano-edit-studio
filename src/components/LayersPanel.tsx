@@ -199,9 +199,10 @@ export const LayersPanel = ({
           variant="outline"
           className="w-full justify-start"
           size="sm"
+          disabled
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add Reference Image
+          Add Reference Image (next release)
         </Button>
         
         {/* Layer Info */}
