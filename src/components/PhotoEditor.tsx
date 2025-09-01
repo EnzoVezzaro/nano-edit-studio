@@ -410,6 +410,20 @@ export const PhotoEditor = () => {
 
         {/* Right Sidebar - Panels */}
         <div className="w-80 bg-card border-l border-border flex flex-col overflow-y-auto">
+          {/* AdSense Rectangular Ad */}
+          <div className="p-4 border-b border-border">
+            <div className="adsense-container text-center">
+              <ins
+                className="adsbygoogle"
+                style={{ display: 'block', width: '300px', height: '250px' }}
+                data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                data-ad-slot="XXXXXXXXXX"
+                data-ad-format="rectangle"
+                data-full-width-responsive="false"
+              ></ins>
+            </div>
+          </div>
+
           {/* API Key Input */}
           <div className="p-4 border-b border-border">
             <label className="text-sm font-medium text-muted-foreground mb-2 block">

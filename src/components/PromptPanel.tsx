@@ -3,11 +3,12 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { 
-  Sparkles, 
-  Wand2, 
-  Palette, 
-  Scissors, 
+import posthog from "posthog-js";
+import {
+  Sparkles,
+  Wand2,
+  Palette,
+  Scissors,
   Layers,
   RotateCcw
 } from "lucide-react";
@@ -46,14 +47,19 @@ const presets = [
   },
 ];
 
-export const PromptPanel = ({ 
-  prompt, 
-  onPromptChange, 
-  onRunEdit, 
-  isProcessing 
+export const PromptPanel = ({
+  prompt,
+  onPromptChange,
+  onRunEdit,
+  isProcessing
 }: PromptPanelProps) => {
   const handlePresetClick = (presetPrompt: string) => {
     onPromptChange(presetPrompt);
+  };
+
+  const handleRunEdit = () => {
+    posthog.capture('run_edit');
+    onRunEdit();
   };
 
   return (
@@ -112,8 +118,8 @@ export const PromptPanel = ({
         
         {/* Action Buttons */}
         <div className="space-y-2">
-          <Button 
-            onClick={onRunEdit}
+          <Button
+            onClick={handleRunEdit}
             disabled={!prompt.trim() || isProcessing}
             className="w-full bg-gradient-primary hover:shadow-primary transition-all duration-300"
             size="lg"
@@ -152,6 +158,20 @@ export const PromptPanel = ({
             <li>• Use selection tools to target specific areas</li>
             <li>• Reference colors, styles, or textures for better results</li>
           </ul>
+        </div>
+
+        {/* AdSense Square Ad */}
+        <div className="mt-4 text-center">
+          <div className="adsense-container">
+            <ins
+              className="adsbygoogle"
+              style={{ display: 'block', width: '250px', height: '250px' }}
+              data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+              data-ad-slot="XXXXXXXXXX"
+              data-ad-format="square"
+              data-full-width-responsive="false"
+            ></ins>
+          </div>
         </div>
       </CardContent>
     </Card>
