@@ -369,7 +369,7 @@ export const PhotoEditor = () => {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Tools */}
-        <div className="w-16 bg-card border-r border-border flex flex-col items-center py-4 gap-2">
+        <div className="w-16 bg-card border-r border-border flex flex-col items-center py-4">
           <ToolPanel
             currentTool={currentTool}
             onToolChange={handleToolChange}

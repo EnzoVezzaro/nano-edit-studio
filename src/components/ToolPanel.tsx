@@ -7,7 +7,9 @@ import {
   Eraser,
   Square,
   Circle,
-  Type
+  Type,
+  Github,
+  Bug
 } from "lucide-react";
 import type { Tool } from "./PhotoEditor";
 import { cn } from "@/lib/utils";
@@ -29,37 +31,74 @@ const tools = [
 
 export const ToolPanel = ({ currentTool, onToolChange }: ToolPanelProps) => {
   return (
-    <>
-      {tools.map((tool) => {
-        const Icon = tool.icon;
-        const isActive = currentTool === tool.id;
-        
-        return (
-          <Tooltip key={tool.id}>
-            <TooltipTrigger asChild>
-              <Button
-                variant={isActive ? "default" : "ghost"}
-                size="sm"
-                className={cn(
-                  "w-10 h-10 p-0 transition-all duration-200",
-                  isActive
-                    ? "bg-gradient-primary shadow-primary text-primary-foreground"
-                    : "hover:bg-accent hover:text-accent-foreground hover:shadow-sm"
-                )}
-                onClick={() => onToolChange(tool.id)}
-              >
-                <Icon className="w-5 h-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="flex items-center gap-2">
-              <span>{tool.label}</span>
-              <kbd className="px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-xs">
-                {tool.shortcut}
-              </kbd>
-            </TooltipContent>
-          </Tooltip>
-        );
-      })}
-    </>
+    <div className="flex flex-col h-full">
+      <div className="flex flex-col gap-2">
+        {tools.map((tool) => {
+          const Icon = tool.icon;
+          const isActive = currentTool === tool.id;
+
+          return (
+            <Tooltip key={tool.id}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={isActive ? "default" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "w-10 h-10 p-0 transition-all duration-200",
+                    isActive
+                      ? "bg-gradient-primary shadow-primary text-primary-foreground"
+                      : "hover:bg-accent hover:text-accent-foreground hover:shadow-sm"
+                  )}
+                  onClick={() => onToolChange(tool.id)}
+                >
+                  <Icon className="w-5 h-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="flex items-center gap-2">
+                <span>{tool.label}</span>
+                <kbd className="px-1.5 py-0.5 bg-muted text-muted-foreground rounded text-xs">
+                  {tool.shortcut}
+                </kbd>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
+      </div>
+
+      {/* Bottom section with Github and Bugs icons */}
+      <div className="flex flex-col gap-2 mt-auto">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground hover:shadow-sm transition-all duration-200"
+              onClick={() => window.open("https://github.com/PhotoBanana/PhotoBanana", "_blank")}
+            >
+              <Github className="w-5 h-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <span>View on GitHub</span>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-10 h-10 p-0 hover:bg-accent hover:text-accent-foreground hover:shadow-sm transition-all duration-200"
+              onClick={() => window.open("https://github.com/PhotoBanana/PhotoBanana/issues", "_blank")}
+            >
+              <Bug className="w-5 h-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <span>Report Bug</span>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </div>
   );
 };
