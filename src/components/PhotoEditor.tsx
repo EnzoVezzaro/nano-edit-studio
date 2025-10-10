@@ -11,17 +11,33 @@ declare global {
 // AdSense Ad Component
 const AdSenseAd = ({ client, slot, format = 'auto', responsive = true, style = {} }) => {
   useEffect(() => {
-    try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
-    } catch (e) {
-      console.error("AdSense error:", e);
-    }
-  }, []);
+    const initializeAd = () => {
+      try {
+        const adElement = document.querySelector(`ins[data-ad-slot="${slot}"]`) as HTMLElement | null;
+        if (adElement && adElement.offsetWidth > 0 && adElement.offsetHeight > 0) {
+          (window.adsbygoogle = window.adsbygoogle || []).push({});
+        } else {
+          // Retry after a short delay if container not ready
+          setTimeout(initializeAd, 100);
+        }
+      } catch (e) {
+        console.error("AdSense error:", e);
+      }
+    };
+
+    // Initial attempt
+    setTimeout(initializeAd, 100);
+  }, [slot]);
 
   return (
     <ins
       className="adsbygoogle"
-      style={{ display: 'block', ...style }}
+      style={{
+        display: 'block',
+        minHeight: '250px',
+        minWidth: '300px',
+        ...style
+      }}
       data-ad-client={client}
       data-ad-slot={slot}
       data-ad-format={format}
