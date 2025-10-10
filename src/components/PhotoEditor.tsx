@@ -414,16 +414,14 @@ export const PhotoEditor = () => {
           {/* AdSense Rectangular Ad */}
           <div className="p-4 border-b border-border">
             <div className="adsense-container text-center">
-              <ins
-                className="adsbygoogle"
-                style={{ display: 'block', width: '300px', height: '250px' }}
-                data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-                data-ad-slot="XXXXXXXXXX"
-                data-ad-format="rectangle"
-                data-full-width-responsive="false"
-              ></ins>
+              <ins className="adsbygoogle"
+                style={{ display: 'block' }}
+                data-ad-client="ca-pub-7913108748890536"
+                data-ad-slot="7387984787"
+                data-ad-format="auto"
+                data-full-width-responsive="true"></ins>
             </div>
-          </div>
+          </div> 
 
           {/* API Key Input */}
           <div className="p-4 border-b border-border">
@@ -524,6 +522,13 @@ export const PhotoEditor = () => {
               }}
             />
           )}
+
+          <ins className="adsbygoogle"
+            style={{ display: 'block' }}
+            data-ad-client="ca-pub-7913108748890536"
+            data-ad-slot="2225682663"
+            data-ad-format="auto"
+            data-full-width-responsive="true"></ins>
         </div>
       </div>
     </div>
