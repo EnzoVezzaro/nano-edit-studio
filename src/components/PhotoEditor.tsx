@@ -1,4 +1,34 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+
+// Extend Window interface for AdSense
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    adsbygoogle: any[];
+  }
+}
+
+// AdSense Ad Component
+const AdSenseAd = ({ client, slot, format = 'auto', responsive = true, style = {} }) => {
+  useEffect(() => {
+    try {
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {
+      console.error("AdSense error:", e);
+    }
+  }, []);
+
+  return (
+    <ins
+      className="adsbygoogle"
+      style={{ display: 'block', ...style }}
+      data-ad-client={client}
+      data-ad-slot={slot}
+      data-ad-format={format}
+      data-full-width-responsive={responsive ? 'true' : 'false'}
+    ></ins>
+  );
+};
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -414,14 +444,14 @@ export const PhotoEditor = () => {
           {/* AdSense Rectangular Ad */}
           <div className="p-4 border-b border-border">
             <div className="adsense-container text-center">
-              <ins className="adsbygoogle"
-                style={{ display: 'block' }}
-                data-ad-client="ca-pub-7913108748890536"
-                data-ad-slot="7387984787"
-                data-ad-format="auto"
-                data-full-width-responsive="true"></ins>
+              <AdSenseAd
+                client="ca-pub-7913108748890536"
+                slot="7387984787"
+                format="auto"
+                responsive={true}
+              />
             </div>
-          </div> 
+          </div>
 
           {/* API Key Input */}
           <div className="p-4 border-b border-border">
@@ -523,12 +553,12 @@ export const PhotoEditor = () => {
             />
           )}
 
-          <ins className="adsbygoogle"
-            style={{ display: 'block' }}
-            data-ad-client="ca-pub-7913108748890536"
-            data-ad-slot="2225682663"
-            data-ad-format="auto"
-            data-full-width-responsive="true"></ins>
+          <AdSenseAd
+            client="ca-pub-7913108748890536"
+            slot="2225682663"
+            format="auto"
+            responsive={true}
+          />
         </div>
       </div>
     </div>
